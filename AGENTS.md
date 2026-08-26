@@ -52,7 +52,7 @@ Components must be built in this exact sequence due to dependencies:
   ```bash
   pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget texinfo make python zstd
   ```
-- **Output**: Toolchain installed to `/e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/`
+- **Output**: Toolchain installed to `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
 ## Component Versions (env.conf)
 | Component | Version |
@@ -75,7 +75,7 @@ Components must be built in this exact sequence due to dependencies:
 ## Artifacts
 - Build dirs: `build/` (temporary, one subdirectory per component)
 - Host tools: `host-tools/` (static libs for build host)
-- Final toolchain: `/e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/`
+- Final toolchain: `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
 ## Modifying the Build
 - **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end

@@ -250,7 +250,7 @@ libc_cv_*                   # Override autoconf checks for cross-build
 - `libatomic.so` - Atomic operations
 - `libsanitizer.*` - AddressSanitizer, ThreadSanitizer, etc.
 
-**Output**: Complete toolchain in `/e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/`
+**Output**: Complete toolchain in `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
 ---
 
@@ -274,7 +274,7 @@ libc_cv_*                   # Override autoconf checks for cross-build
 ### File Structure
 
 ```
-build-win32-arm-toolchain/
+Neo-PiOS-cross-toolchain/
 ├── env.conf          # Configuration: versions, paths, target
 ├── env.build         # Build script (this file)
 ├── build/            # Temporary build directories (deleted after build)
@@ -358,16 +358,16 @@ bash env.build
 
 ```bash
 # Check compiler version
-/e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc --version
+/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc --version
 # Expected: gcc (GCC) 15.3.0
 
 # Check debugger version
-/e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gdb --version
+/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gdb --version
 # Expected: GNU gdb 15.2
 
 # Test compilation
 echo 'int main(){return 0;}' | \
-  /e/build-win32-arm-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc -x c - -o test.exe
+  /e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc -x c - -o test.exe
 
 file test.exe
 # Expected: PE32+ executable (console) x86-64
