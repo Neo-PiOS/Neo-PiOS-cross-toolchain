@@ -6,6 +6,34 @@ Builds a complete GCC 15.3.0 cross-compiler toolchain targeting **aarch64-linux-
 
 A **cross-compiler** runs on one architecture (x86_64 Windows/MSYS2) but produces binaries for a different architecture (AArch64 Linux). This toolchain enables you to compile Linux ARM programs from your Windows development machine.
 
+## Sysroot Requirement (Critical)
+
+**This toolchain requires a pre-built sysroot** containing kernel headers for the target system. The sysroot is built using [Neo-PiOS](https://github.com/funZX/Neo-PiOS), a Yocto/OpenEmbedded-based embedded Linux distribution for Raspberry Pi 4.
+
+### Building the Sysroot
+
+From the Neo-PiOS repository (in a Yocto build environment):
+
+```bash
+# Build the SDK which includes the sysroot with kernel headers
+bitbake core-image-minimal -c populate_sdk
+```
+
+This produces a sysroot at:
+```
+build/tmp/work/<machine>-neopios-linux/core-image-minimal/<version>/sdk/sysroots-components/aarch64-neopios-linux/
+```
+
+### Configure the Toolchain
+
+Set the `SYSROOT` variable in `env.conf` to point to your Yocto-built sysroot:
+
+```bash
+export SYSROOT='/path/to/yocto/build/sysroots/aarch64-neopios-linux'
+```
+
+**Why this matters**: Glibc (Stage 4) requires kernel headers (`<linux/*.h>`, `<asm/*.h>`, `<asm-generic/*.h>`) to build. These headers define the kernel-userspace ABI (system call numbers, data structures, constants). Without matching headers, glibc compilation will fail.
+
 ## Why Build from Source?
 
 This project builds **all dependencies from source** rather than using system packages:
@@ -170,10 +198,12 @@ The build is split into stages that break this circular dependency:
 
 **Why here**: Now we have xgcc (stage 3) which can compile C code, and binutils (stage 2) which can assemble and link ARM64 objects.
 
+**Prerequisite**: Kernel headers from a Yocto sysroot (see [Sysroot Requirement](#sysroot-requirement-critical)).
+
 **Key configuration**:
 ```bash
 --host=${TARGET}            # Cross-compile for aarch64
---with-headers=${SYSROOT}/usr/include  # Target kernel headers
+--with-headers=${SYSROOT}/usr/include  # Target kernel headers (REQUIRED)
 CC="${TARGET}-gcc"          # Use the xgcc we just built
 --disable-sanity-checks     # Skip host compatibility checks
 libc_cv_*                   # Override autoconf checks for cross-build
@@ -183,6 +213,12 @@ libc_cv_*                   # Override autoconf checks for cross-build
 - `libc_cv_forced_unwind=yes`: Required for cross-compile (glibc can't detect unwind support)
 - `libc_cv_ssp=no`: Disable stack protector (not available yet)
 - `--enable-hacker-mode`: Allow building without full toolchain
+
+**Why kernel headers are required**: Glibc needs to know the kernel-userspace ABI:
+- System call numbers and calling conventions
+- Data structures (e.g., `struct stat`, `struct timespec`)
+- Constants (e.g., `errno` values, `SIG*` signals)
+- Type definitions (e.g., `pid_t`, `ssize_t`)
 
 **Output**: C library installed to sysroot (`${SYSROOT}/lib/`, `${SYSROOT}/usr/include/`)
 
@@ -380,3 +416,4 @@ Edit version exports in `env.conf`.
 - [Linux From Scratch - GCC](https://www.linuxfromscratch.org/lfs/view/stable/chapter05/gcc-pass1.html)
 - [OSDev Wiki - GCC Cross-Compiler](https://wiki.osdev.org/GCC_Cross-Compiler)
 - [GNU Toolchain for AArch64](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
+- [Neo-PiOS](https://github.com/funZX/Neo-PiOS) - Yocto-based embedded Linux for Raspberry Pi 4 (sysroot source)

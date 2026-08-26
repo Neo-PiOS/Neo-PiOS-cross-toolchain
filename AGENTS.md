@@ -3,8 +3,43 @@
 ## Purpose
 Builds a GCC 15.3.0 cross-compiler toolchain targeting **aarch64-linux-gnu** (64-bit ARM) from a Windows/MSYS2 host.
 
+## Sysroot Requirement (Critical)
+
+**This toolchain requires a pre-built sysroot** with kernel headers for glibc to compile.
+
+### Source: Neo-PiOS Project
+
+The sysroot is built using [Neo-PiOS](https://github.com/funZX/Neo-PiOS), a Yocto/OpenEmbedded-based embedded Linux distribution for Raspberry Pi 4.
+
+**Build command** (from Neo-PiOS repository, in Yocto environment):
+```bash
+bitbake core-image-minimal -c populate_sdk
+```
+
+**Sysroot location**:
+```
+build/tmp/work/<machine>-neopios-linux/core-image-minimal/<version>/sdk/sysroots-components/aarch64-neopios-linux/
+```
+
+### Configure SYSROOT
+
+Set in `env.conf`:
+```bash
+export SYSROOT='/path/to/yocto/sysroots/aarch64-neopios-linux'
+```
+
+**Why required**: Glibc needs kernel headers (`<linux/*.h>`, `<asm/*.h>`) for:
+- System call numbers and calling conventions
+- Kernel data structures (`struct stat`, `struct timespec`)
+- Constants (errno values, signals)
+- Type definitions (`pid_t`, `ssize_t`)
+
+Without matching headers, glibc compilation fails.
+
+---
+
 ## Key Files
-- `env.conf` — Configuration: versions, paths, target architecture
+- `env.conf` — Configuration: versions, paths, target architecture, SYSROOT
 - `env.build` — Build script: downloads, extracts, and builds all components
 
 ## Build Order (Critical)
@@ -47,7 +82,11 @@ Components must be built in this exact sequence due to dependencies:
 - **Change versions**: Update `*_VERSION` exports in `env.conf`
 - **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
 - **Switch target**: Comment current TARGET block, uncomment alternative in `env.conf`
+- **Change sysroot**: Update `SYSROOT` to point to different Yocto build
 
 ## Build Time & Space
-- **Disk space**: ~13 GB required
+- **Disk space**: ~13 GB required (plus ~10-20 GB for Neo-PiOS sysroot build)
 - **Build time**: ~2-4 hours depending on CPU cores
+
+## Related Projects
+- [Neo-PiOS](https://github.com/funZX/Neo-PiOS) - Yocto-based embedded Linux for Raspberry Pi 4 (provides sysroot)
