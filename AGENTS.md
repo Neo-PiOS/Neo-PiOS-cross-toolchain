@@ -5,27 +5,28 @@ Builds a GCC 15.3.0 cross-compiler toolchain targeting **aarch64-linux-gnu** (64
 
 ## Sysroot Requirement (Critical)
 
-**This toolchain requires a pre-built sysroot** with kernel headers for glibc to compile.
+**This toolchain requires kernel headers** for glibc to compile. Extract them from a Neo-PiOS Yocto build.
 
-### Source: Neo-PiOS Project
+### Extract Kernel Headers from Neo-PiOS
 
-The sysroot is built using [Neo-PiOS](https://github.com/funZX/Neo-PiOS), a Yocto/OpenEmbedded-based embedded Linux distribution for Raspberry Pi 4.
+From the Neo-PiOS repository (after Yocto build):
 
-**Build command** (from Neo-PiOS repository, in Yocto environment):
 ```bash
-bitbake core-image-minimal -c populate_sdk
+# Extract linux-libc-headers-dev package
+cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
+ar x linux-libc-headers.ipk
+mkdir kernel-headers
+tar --zstd -xf data.tar.zst -C kernel-headers
+mv kernel-headers ${OUTPUT_DIR}
 ```
 
-**Sysroot location**:
-```
-build/tmp/work/<machine>-neopios-linux/core-image-minimal/<version>/sdk/sysroots-components/aarch64-neopios-linux/
-```
+This extracts headers to `${OUTPUT_DIRECTORY}/kernel-headers/`.
 
 ### Configure SYSROOT
 
 Set in `env.conf`:
 ```bash
-export SYSROOT='/path/to/yocto/sysroots/aarch64-neopios-linux'
+export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
 ```
 
 **Why required**: Glibc needs kernel headers (`<linux/*.h>`, `<asm/*.h>`) for:
@@ -76,17 +77,18 @@ Components must be built in this exact sequence due to dependencies:
 - Build dirs: `build/` (temporary, one subdirectory per component)
 - Host tools: `host-tools/` (static libs for build host)
 - Final toolchain: `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
+- Kernel headers: `${OUTPUT_DIRECTORY}/kernel-headers/` (from Neo-PiOS)
 
 ## Modifying the Build
 - **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end
 - **Change versions**: Update `*_VERSION` exports in `env.conf`
 - **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
 - **Switch target**: Comment current TARGET block, uncomment alternative in `env.conf`
-- **Change sysroot**: Update `SYSROOT` to point to different Yocto build
+- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to extracted headers
 
 ## Build Time & Space
-- **Disk space**: ~13 GB required (plus ~10-20 GB for Neo-PiOS sysroot build)
+- **Disk space**: ~13 GB required (plus Neo-PiOS build for headers)
 - **Build time**: ~2-4 hours depending on CPU cores
 
 ## Related Projects
-- [Neo-PiOS](https://github.com/funZX/Neo-PiOS) - Yocto-based embedded Linux for Raspberry Pi 4 (provides sysroot)
+- [Neo-PiOS](https://github.com/Neo-PiOS/Neo-PiOS) - Yocto-based embedded Linux for Raspberry Pi 4 (provides kernel headers)

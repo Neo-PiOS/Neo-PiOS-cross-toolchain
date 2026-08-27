@@ -8,31 +8,38 @@ A **cross-compiler** runs on one architecture (x86_64 Windows/MSYS2) but produce
 
 ## Sysroot Requirement (Critical)
 
-**This toolchain requires a pre-built sysroot** containing kernel headers for the target system. The sysroot is built using [Neo-PiOS](https://github.com/funZX/Neo-PiOS), a Yocto/OpenEmbedded-based embedded Linux distribution for Raspberry Pi 4.
+**This toolchain requires kernel headers** for the target system. The headers are extracted from a Neo-PiOS Yocto build.
 
-### Building the Sysroot
+### Extracting Kernel Headers from Neo-PiOS
 
-From the Neo-PiOS repository (in a Yocto build environment):
+From the Neo-PiOS repository (after a successful Yocto build):
 
 ```bash
-# Build the SDK which includes the sysroot with kernel headers
-bitbake core-image-minimal -c populate_sdk
+# Extract the linux-libc-headers-dev package
+cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
+ar x linux-libc-headers.ipk
+mkdir kernel-headers
+tar --zstd -xf data.tar.zst -C kernel-headers
+mv kernel-headers ${OUTPUT_DIR}
 ```
 
-This produces a sysroot at:
-```
-build/tmp/work/<machine>-neopios-linux/core-image-minimal/<version>/sdk/sysroots-components/aarch64-neopios-linux/
-```
+This extracts the kernel headers to your toolchain output directory.
 
 ### Configure the Toolchain
 
-Set the `SYSROOT` variable in `env.conf` to point to your Yocto-built sysroot:
+Set the `SYSROOT` variable in `env.conf` to point to the extracted headers:
 
 ```bash
-export SYSROOT='/path/to/yocto/build/sysroots/aarch64-neopios-linux'
+export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
 ```
 
-**Why this matters**: Glibc (Stage 4) requires kernel headers (`<linux/*.h>`, `<asm/*.h>`, `<asm-generic/*.h>`) to build. These headers define the kernel-userspace ABI (system call numbers, data structures, constants). Without matching headers, glibc compilation will fail.
+**Why this matters**: Glibc (Stage 4) requires kernel headers (`<linux/*.h>`, `<asm/*.h>`, `<asm-generic/*.h>`) to build. These headers define the kernel-userspace ABI:
+- System call numbers and calling conventions
+- Kernel data structures (`struct stat`, `struct timespec`)
+- Constants (errno values, signals)
+- Type definitions (`pid_t`, `ssize_t`)
+
+Without matching headers, glibc compilation will fail.
 
 ## Why Build from Source?
 
@@ -198,7 +205,7 @@ The build is split into stages that break this circular dependency:
 
 **Why here**: Now we have xgcc (stage 3) which can compile C code, and binutils (stage 2) which can assemble and link ARM64 objects.
 
-**Prerequisite**: Kernel headers from a Yocto sysroot (see [Sysroot Requirement](#sysroot-requirement-critical)).
+**Prerequisite**: Kernel headers extracted from Neo-PiOS Yocto build (see [Sysroot Requirement](#sysroot-requirement-critical)).
 
 **Key configuration**:
 ```bash
@@ -220,7 +227,7 @@ libc_cv_*                   # Override autoconf checks for cross-build
 - Constants (e.g., `errno` values, `SIG*` signals)
 - Type definitions (e.g., `pid_t`, `ssize_t`)
 
-**Output**: C library installed to sysroot (`${SYSROOT}/lib/`, `${SYSROOT}/usr/include/`)
+**Output**: C library installed to toolchain sysroot (`${INSTALL_DIR}/aarch64-linux-gnu/libc/`)
 
 ---
 
