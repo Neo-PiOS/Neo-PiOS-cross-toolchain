@@ -54,6 +54,7 @@ Components must be built in this exact sequence due to dependencies:
 - **GMP Configuration**: MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags to ensure static `libgmp.a` is found
 - **Warning Handling**: `--disable-werror` removed from all components to allow builds to continue despite compiler warnings
 - **GMP Patch Required**: The `gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64
+- **Cortex-A53 Optimization**: GCC and glibc tuned for Raspberry Pi 4 via `TUNE` and `GLIBC_TUNE` variables
 
 ## Environment
 - **Host**: MSYS2/MinGW on Windows
@@ -81,8 +82,9 @@ Components must be built in this exact sequence due to dependencies:
 
 ## Target Architecture
 - **Active**: `aarch64-linux-gnu` (64-bit ARM)
-- **Disabled**: `armv7a-linux-gnueabihf` (commented in env.conf)
-- **Tune flags**: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+- **Tune flags**: 
+  - GCC: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+  - glibc: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
 
 ## Artifacts
 - Build dirs: `build/` (temporary, one subdirectory per component)
@@ -94,7 +96,7 @@ Components must be built in this exact sequence due to dependencies:
 - **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end
 - **Change versions**: Update `*_VERSION` exports in `env.conf`
 - **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
-- **Switch target**: Comment current TARGET block, uncomment alternative in `env.conf`
+- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE block in `env.conf`
 - **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to extracted headers
 
 ## Build Time & Space

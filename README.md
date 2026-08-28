@@ -337,6 +337,14 @@ The `--disable-werror` flag has been removed from all components. This allows bu
 
 **Libiconv Patch**: The `patches/libiconv-1.17-mingw-mbrtowc.patch` fixes the mbtowc test on MinGW.
 
+### Cortex-A53 Optimization
+
+The toolchain is optimized for Raspberry Pi 4's Cortex-A53 processor:
+- **GCC**: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+- **glibc**: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
+
+These flags enable Cortex-A53-specific optimizations and errata workarounds in both the compiler and C library.
+
 ---
 
 ## Prerequisites
@@ -412,12 +420,13 @@ file test.exe
 
 ### Change Target
 
-Edit `env.conf` — uncomment desired target block:
+Edit `env.conf` — modify the TARGET block:
 
 ```bash
-# 32-bit ARM (hard-float, NEON)
-export TARGET=armv7a-linux-gnueabihf
-export TUNE="--with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=neon"
+# 64-bit ARM (Cortex-A53, Raspberry Pi 4)
+export TARGET=aarch64-linux-gnu
+export TUNE="--with-arch=aarch64 --enable-fix-cortex-a53-843419"
+export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
 ```
 
 ### Change Output Path
