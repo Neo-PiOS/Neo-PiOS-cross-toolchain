@@ -15,18 +15,17 @@ From the Neo-PiOS repository (after Yocto build):
 # Extract linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir kernel-headers
-tar --zstd -xf data.tar.zst -C kernel-headers
-mv kernel-headers ${OUTPUT_DIR}
+mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
 ```
 
-This extracts headers to `${OUTPUT_DIRECTORY}/kernel-headers/`.
+This extracts headers to `${SYSROOT}/usr/include/`.
 
 ### Configure SYSROOT
 
 Set in `env.conf`:
 ```bash
-export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
+export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
 ```
 
 **Why required**: Glibc needs kernel headers (`<linux/*.h>`, `<asm/*.h>`) for:
@@ -91,15 +90,15 @@ Components must be built in this exact sequence due to dependencies:
 ## Artifacts
 - Build dirs: `build/` (temporary, one subdirectory per component)
 - Host tools: `host-tools/` (static libs for build host)
-- Final toolchain: `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
-- Kernel headers: `${OUTPUT_DIRECTORY}/kernel-headers/` (from Neo-PiOS)
+- Final toolchain: `/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/`
+- Kernel headers: `${SYSROOT}/usr/include/` (from Neo-PiOS, merged with glibc headers)
 
 ## Modifying the Build
 - **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end
 - **Change versions**: Update `*_VERSION` exports in `env.conf`
 - **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
-- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE block in `env.conf`
-- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to extracted headers
+- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE/SYSROOT block in `env.conf`
+- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to toolchain directory
 
 ## Build Time & Space
 - **Disk space**: ~13 GB required (plus Neo-PiOS build for headers)
