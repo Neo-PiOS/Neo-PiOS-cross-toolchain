@@ -284,6 +284,9 @@ libc_cv_*                   # Override autoconf checks for cross-build
 Neo-PiOS-cross-toolchain/
 ├── env.conf          # Configuration: versions, paths, target
 ├── env.build         # Build script (this file)
+├── patches/          # Custom patches for MinGW-w64 compatibility
+│   ├── gmp-6.3.0-long-long-reliability.patch  # Fixes GMP configure test
+│   └── libiconv-1.17-mingw-mbrtowc.patch      # Fixes libiconv mbtowc test
 ├── build/            # Temporary build directories (deleted after build)
 ├── host-tools/       # Host libraries (GMP, MPFR, etc.)
 └── gcc-aarch64-linux-gnu/  # Final toolchain
@@ -318,6 +321,24 @@ This ensures:
 
 ---
 
+## Build Notes
+
+### GMP Configuration
+
+MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags instead of `--with-gmp-prefix` to ensure the static `libgmp.a` is found correctly during configuration.
+
+### Warning Handling
+
+The `--disable-werror` flag has been removed from all components. This allows builds to continue despite compiler warnings, which is common when cross-compiling with different toolchain versions.
+
+### Required Patches
+
+**GMP Patch**: The `patches/gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64. This patch is applied automatically during the build.
+
+**Libiconv Patch**: The `patches/libiconv-1.17-mingw-mbrtowc.patch` fixes the mbtowc test on MinGW.
+
+---
+
 ## Prerequisites
 
 ### MSYS2 Packages (Build Tools Only)
@@ -329,6 +350,11 @@ pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
 ```
 
 **Note**: GMP, MPFR, MPC, ISL are **built from source** by this script, not installed via pacman.
+
+**Required runtime DLL**: The build requires `libwinpthread-1.dll` which is copied to the toolchain lib directory. If missing, the build will fail with an error. Install with:
+```bash
+pacman -S mingw-w64-x86_64-gcc
+```
 
 ### Disk Space
 

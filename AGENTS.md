@@ -42,10 +42,18 @@ Without matching headers, glibc compilation fails.
 ## Key Files
 - `env.conf` — Configuration: versions, paths, target architecture, SYSROOT
 - `env.build` — Build script: downloads, extracts, and builds all components
+- `patches/` — Custom patches for MinGW-w64 compatibility:
+  - `gmp-6.3.0-long-long-reliability.patch` — Fixes GMP configure test for long long reliability
+  - `libiconv-1.17-mingw-mbrtowc.patch` — Fixes libiconv mbtowc test on MinGW
 
 ## Build Order (Critical)
 Components must be built in this exact sequence due to dependencies:
 1. libiconv → 2. gmp → 3. isl → 4. mpfr → 5. mpc → 6. binutils → 7. xgcc (stage 1) → 8. glibc → 9. gcc (stage 2) → 10. gdb
+
+## Build Notes
+- **GMP Configuration**: MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags to ensure static `libgmp.a` is found
+- **Warning Handling**: `--disable-werror` removed from all components to allow builds to continue despite compiler warnings
+- **GMP Patch Required**: The `gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64
 
 ## Environment
 - **Host**: MSYS2/MinGW on Windows
@@ -53,6 +61,9 @@ Components must be built in this exact sequence due to dependencies:
   ```bash
   pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget texinfo make python zstd
   ```
+- **Required runtime DLL**: `libwinpthread-1.dll` (copied to toolchain lib directory)
+  - Build will fail if this DLL is not found in MSYS2
+  - Install with: `pacman -S mingw-w64-x86_64-gcc`
 - **Output**: Toolchain installed to `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
 ## Component Versions (env.conf)
