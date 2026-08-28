@@ -340,10 +340,12 @@ The `--disable-werror` flag has been removed from all components. This allows bu
 ### Cortex-A53 Optimization
 
 The toolchain is optimized for Raspberry Pi 4's Cortex-A53 processor:
-- **GCC**: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+- **GCC**: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
 - **glibc**: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
 
 These flags enable Cortex-A53-specific optimizations and errata workarounds in both the compiler and C library.
+
+**Note**: The target architecture (`aarch64`) is specified by the `--target` triplet, not a configure flag.
 
 ---
 
@@ -425,9 +427,11 @@ Edit `env.conf` — modify the TARGET block:
 ```bash
 # 64-bit ARM (Cortex-A53, Raspberry Pi 4)
 export TARGET=aarch64-linux-gnu
-export TUNE="--with-arch=aarch64 --enable-fix-cortex-a53-843419"
+export TUNE="--enable-fix-cortex-a53-843419"
 export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
 ```
+
+**Note**: The target architecture is determined by the `--target` triplet. The `TUNE` variable contains only valid GCC configure flags.
 
 ### Change Output Path
 

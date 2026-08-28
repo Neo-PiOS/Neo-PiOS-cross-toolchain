@@ -55,6 +55,8 @@ Components must be built in this exact sequence due to dependencies:
 - **Warning Handling**: `--disable-werror` removed from all components to allow builds to continue despite compiler warnings
 - **GMP Patch Required**: The `gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64
 - **Cortex-A53 Optimization**: GCC and glibc tuned for Raspberry Pi 4 via `TUNE` and `GLIBC_TUNE` variables
+  - GCC: `--enable-fix-cortex-a53-843419` (errata workaround)
+  - glibc: `-march=aarch64 -mcpu=cortex-a53` (compilation flags)
 
 ## Environment
 - **Host**: MSYS2/MinGW on Windows
@@ -83,7 +85,7 @@ Components must be built in this exact sequence due to dependencies:
 ## Target Architecture
 - **Active**: `aarch64-linux-gnu` (64-bit ARM)
 - **Tune flags**: 
-  - GCC: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+  - GCC: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
   - glibc: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
 
 ## Artifacts
