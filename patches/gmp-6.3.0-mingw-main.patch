@@ -1,0 +1,20 @@
+--- a/configure
++++ b/configure
+@@ -6389,7 +6389,8 @@ if test "$gmp_prog_cc_works" = yes; then
+   # remove anything that might look like compiler output to our "||" expression
+   rm -f conftest* a.out b.out a.exe a_out.exe
+   cat >conftest.c <<EOF
+ int k; int foo () { __builtin_alloca (k); }
++int main() { return 0; }
+ EOF
+   echo "Test compile: __builtin_alloca availability" >&5
+   gmp_compile="$cc $cflags $cppflags conftest.c >&5"
+@@ -8008,7 +8009,8 @@ if test "$gmp_prog_cc_works" = yes; then
+   # remove anything that might look like compiler output to our "||" expression
+   rm -f conftest* a.out b.out a.exe a_out.exe
+   cat >conftest.c <<EOF
+ int k; int foo () { __builtin_alloca (k); }
++int main() { return 0; }
+ EOF
+   echo "Test compile: __builtin_alloca availability" >&5
+   gmp_compile="$cc $cflags $cppflags $flag conftest.c >&5"
