@@ -15,18 +15,17 @@ From the Neo-PiOS repository (after Yocto build):
 # Extract linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir kernel-headers
-tar --zstd -xf data.tar.zst -C kernel-headers
-mv kernel-headers ${OUTPUT_DIR}
+mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
 ```
 
-This extracts headers to `${OUTPUT_DIRECTORY}/kernel-headers/`.
+This extracts headers to `${SYSROOT}/usr/include/`.
 
 ### Configure SYSROOT
 
 Set in `env.conf`:
 ```bash
-export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
+export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
 ```
 
 **Why required**: Glibc needs kernel headers (`<linux/*.h>`, `<asm/*.h>`) for:
@@ -42,10 +41,21 @@ Without matching headers, glibc compilation fails.
 ## Key Files
 - `env.conf` — Configuration: versions, paths, target architecture, SYSROOT
 - `env.build` — Build script: downloads, extracts, and builds all components
+- `patches/` — Custom patches for MinGW-w64 compatibility:
+  - `gmp-6.3.0-long-long-reliability.patch` — Fixes GMP configure test for long long reliability
+  - `libiconv-1.17-mingw-mbrtowc.patch` — Fixes libiconv mbtowc test on MinGW
 
 ## Build Order (Critical)
 Components must be built in this exact sequence due to dependencies:
 1. libiconv → 2. gmp → 3. isl → 4. mpfr → 5. mpc → 6. binutils → 7. xgcc (stage 1) → 8. glibc → 9. gcc (stage 2) → 10. gdb
+
+## Build Notes
+- **GMP Configuration**: MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags to ensure static `libgmp.a` is found
+- **Warning Handling**: `--disable-werror` removed from all components to allow builds to continue despite compiler warnings
+- **GMP Patch Required**: The `gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64
+- **Cortex-A53 Optimization**: GCC and glibc tuned for Raspberry Pi 4 via `TUNE` and `GLIBC_TUNE` variables
+  - GCC: `--enable-fix-cortex-a53-843419` (errata workaround)
+  - glibc: `-march=aarch64 -mcpu=cortex-a53` (compilation flags)
 
 ## Environment
 - **Host**: MSYS2/MinGW on Windows
@@ -53,6 +63,9 @@ Components must be built in this exact sequence due to dependencies:
   ```bash
   pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget texinfo make python zstd
   ```
+- **Required runtime DLL**: `libwinpthread-1.dll` (copied to toolchain lib directory)
+  - Build will fail if this DLL is not found in MSYS2
+  - Install with: `pacman -S mingw-w64-x86_64-gcc`
 - **Output**: Toolchain installed to `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
 ## Component Versions (env.conf)
@@ -70,21 +83,22 @@ Components must be built in this exact sequence due to dependencies:
 
 ## Target Architecture
 - **Active**: `aarch64-linux-gnu` (64-bit ARM)
-- **Disabled**: `armv7a-linux-gnueabihf` (commented in env.conf)
-- **Tune flags**: `--with-arch=aarch64 --enable-fix-cortex-a53-843419`
+- **Tune flags**: 
+  - GCC: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
+  - glibc: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
 
 ## Artifacts
 - Build dirs: `build/` (temporary, one subdirectory per component)
 - Host tools: `host-tools/` (static libs for build host)
-- Final toolchain: `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
-- Kernel headers: `${OUTPUT_DIRECTORY}/kernel-headers/` (from Neo-PiOS)
+- Final toolchain: `/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/`
+- Kernel headers: `${SYSROOT}/usr/include/` (from Neo-PiOS, merged with glibc headers)
 
 ## Modifying the Build
 - **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end
 - **Change versions**: Update `*_VERSION` exports in `env.conf`
 - **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
-- **Switch target**: Comment current TARGET block, uncomment alternative in `env.conf`
-- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to extracted headers
+- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE/SYSROOT block in `env.conf`
+- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to toolchain directory
 
 ## Build Time & Space
 - **Disk space**: ~13 GB required (plus Neo-PiOS build for headers)

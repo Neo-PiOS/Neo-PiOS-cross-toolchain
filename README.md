@@ -18,19 +18,18 @@ From the Neo-PiOS repository (after a successful Yocto build):
 # Extract the linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir kernel-headers
-tar --zstd -xf data.tar.zst -C kernel-headers
-mv kernel-headers ${OUTPUT_DIR}
+mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
 ```
 
-This extracts the kernel headers to your toolchain output directory.
+This extracts the kernel headers to `${SYSROOT}/usr/include/`, where the toolchain build can find them.
 
 ### Configure the Toolchain
 
-Set the `SYSROOT` variable in `env.conf` to point to the extracted headers:
+Set the `SYSROOT` variable in `env.conf` to point to the toolchain directory:
 
 ```bash
-export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
+export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
 ```
 
 **Why this matters**: Glibc (Stage 4) requires kernel headers (`<linux/*.h>`, `<asm/*.h>`, `<asm-generic/*.h>`) to build. These headers define the kernel-userspace ABI:
@@ -40,6 +39,8 @@ export SYSROOT='${OUTPUT_DIRECTORY}/kernel-headers'
 - Type definitions (`pid_t`, `ssize_t`)
 
 Without matching headers, glibc compilation will fail.
+
+**Kernel headers location**: Extract from Neo-PiOS Yocto build to `${SYSROOT}/usr/include/` (see [Sysroot Requirement](#sysroot-requirement-critical)).
 
 ## Why Build from Source?
 
@@ -284,9 +285,15 @@ libc_cv_*                   # Override autoconf checks for cross-build
 Neo-PiOS-cross-toolchain/
 ├── env.conf          # Configuration: versions, paths, target
 ├── env.build         # Build script (this file)
+├── patches/          # Custom patches for MinGW-w64 compatibility
+│   ├── gmp-6.3.0-long-long-reliability.patch  # Fixes GMP configure test
+│   └── libiconv-1.17-mingw-mbrtowc.patch      # Fixes libiconv mbtowc test
 ├── build/            # Temporary build directories (deleted after build)
 ├── host-tools/       # Host libraries (GMP, MPFR, etc.)
-└── gcc-aarch64-linux-gnu/  # Final toolchain
+└── aarch64-linux-gnu/  # Final toolchain installation
+    ├── bin/          # Cross-compiler binaries (aarch64-linux-gnu-*)
+    ├── lib/          # Libraries
+    └── usr/          # Target headers and libraries (kernel + glibc)
 ```
 
 ### How env.build Works
@@ -318,6 +325,34 @@ This ensures:
 
 ---
 
+## Build Notes
+
+### GMP Configuration
+
+MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags instead of `--with-gmp-prefix` to ensure the static `libgmp.a` is found correctly during configuration.
+
+### Warning Handling
+
+The `--disable-werror` flag has been removed from all components. This allows builds to continue despite compiler warnings, which is common when cross-compiling with different toolchain versions.
+
+### Required Patches
+
+**GMP Patch**: The `patches/gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64. This patch is applied automatically during the build.
+
+**Libiconv Patch**: The `patches/libiconv-1.17-mingw-mbrtowc.patch` fixes the mbtowc test on MinGW.
+
+### Cortex-A53 Optimization
+
+The toolchain is optimized for Raspberry Pi 4's Cortex-A53 processor:
+- **GCC**: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
+- **glibc**: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
+
+These flags enable Cortex-A53-specific optimizations and errata workarounds in both the compiler and C library.
+
+**Note**: The target architecture (`aarch64`) is specified by the `--target` triplet, not a configure flag.
+
+---
+
 ## Prerequisites
 
 ### MSYS2 Packages (Build Tools Only)
@@ -329,6 +364,11 @@ pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
 ```
 
 **Note**: GMP, MPFR, MPC, ISL are **built from source** by this script, not installed via pacman.
+
+**Required runtime DLL**: The build requires `libwinpthread-1.dll` which is copied to the toolchain lib directory. If missing, the build will fail with an error. Install with:
+```bash
+pacman -S mingw-w64-x86_64-gcc
+```
 
 ### Disk Space
 
@@ -365,16 +405,16 @@ bash env.build
 
 ```bash
 # Check compiler version
-/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc --version
+/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc --version
 # Expected: gcc (GCC) 15.3.0
 
 # Check debugger version
-/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gdb --version
+/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gdb --version
 # Expected: GNU gdb 15.2
 
 # Test compilation
 echo 'int main(){return 0;}' | \
-  /e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc -x c - -o test.exe
+  /e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc -x c - -o test.exe
 
 file test.exe
 # Expected: PE32+ executable (console) x86-64
@@ -386,13 +426,17 @@ file test.exe
 
 ### Change Target
 
-Edit `env.conf` — uncomment desired target block:
+Edit `env.conf` — modify the TARGET block:
 
 ```bash
-# 32-bit ARM (hard-float, NEON)
-export TARGET=armv7a-linux-gnueabihf
-export TUNE="--with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=neon"
+# 64-bit ARM (Cortex-A53, Raspberry Pi 4)
+export TARGET=aarch64-linux-gnu
+export TUNE="--enable-fix-cortex-a53-843419"
+export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
+export SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
 ```
+
+**Note**: The target architecture is determined by the `--target` triplet. The `TUNE` variable contains only valid GCC configure flags.
 
 ### Change Output Path
 
