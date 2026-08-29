@@ -15,8 +15,8 @@ From the Neo-PiOS repository (after Yocto build):
 # Extract linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
-tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+mkdir -p ${SYSROOT}
+tar --zstd -xf data.tar.zst -C ${SYSROOT}
 ```
 
 This extracts headers to `${SYSROOT}/usr/include/`.

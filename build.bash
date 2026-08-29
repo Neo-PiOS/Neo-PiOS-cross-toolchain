@@ -538,9 +538,9 @@ function do_xgcc()
 function do_glibc_headers()
 {
   # Check if kernel headers exist before proceeding
-  if [ ! -d "${HOST_TOOLS}/usr/include" ]; then
+  if [ ! -d "${SYSROOT}/usr/include" ]; then
     echo ""
-    echo -e "\033[0;31m[ERROR]\033[0m Kernel headers not found at ${HOST_TOOLS}/usr/include"
+    echo -e "\033[0;31m[ERROR]\033[0m Kernel headers not found at ${SYSROOT}/usr/include"
     echo ""
     echo "========================================"
     echo -e "\033[0;31mKERNEL HEADERS REQUIRED\033[0m"
@@ -552,10 +552,10 @@ function do_glibc_headers()
     echo "Quick reference:"
     echo "  cp \$(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk"
     echo "  ar x linux-libc-headers.ipk"
-    echo "  mkdir -p \${HOST_TOOLS}"
-    echo "  tar --zstd -xf data.tar.zst -C \${HOST_TOOLS}"
+    echo "  mkdir -p \${SYSROOT}"
+    echo "  tar --zstd -xf data.tar.zst -C \${SYSROOT}"
     echo ""
-    echo "This extracts headers to: ${HOST_TOOLS}/usr/include/"
+    echo "This extracts headers to: ${SYSROOT}/usr/include/"
     echo "========================================"
     echo ""
     read -p "Have you extracted the kernel headers? Continue anyway? [y/N]: " confirm
@@ -586,7 +586,7 @@ function do_glibc_headers()
   --without-selinux \
   --without-cvs \
   --without-gd \
-  --with-headers=${HOST_TOOLS}/usr/include \
+  --with-headers=${SYSROOT}/usr/include \
   --disable-nls \
   --disable-sanity-checks \
   --disable-profile \
@@ -624,7 +624,6 @@ function do_gcc()
   --build=${HOST} \
   --target=${TARGET} ${TUNE} \
   --with-sysroot=${SYSROOT} \
-  --with-headers=${HOST_TOOLS}/usr/include \
   --with-libiconv-prefix=${HOST_TOOLS} \
   --with-isl=${HOST_TOOLS} \
   --with-gmp=${HOST_TOOLS} \
@@ -676,7 +675,7 @@ function do_glibc()
   --without-selinux \
   --without-cvs \
   --without-gd \
-  --with-headers=${HOST_TOOLS}/usr/include \
+  --with-headers=${SYSROOT}/usr/include \
   --disable-nls \
   --disable-sanity-checks \
   --disable-profile \
