@@ -1,108 +1,93 @@
-# Agent Instructions
+# Agent Instructions: Neo-PiOS Cross-Toolchain
 
-## Purpose
-Builds a GCC 15.3.0 cross-compiler toolchain targeting **aarch64-linux-gnu** (64-bit ARM) from a Windows/MSYS2 host.
+## Critical Prerequisites
 
-## Sysroot Requirement (Critical)
-
-**This toolchain requires kernel headers** for glibc to compile. Extract them from a Neo-PiOS Yocto build.
-
-### Extract Kernel Headers from Neo-PiOS
-
-From the Neo-PiOS repository (after Yocto build):
+**Kernel headers are required before glibc build.** Without these, the build fails at Stage 4.
 
 ```bash
-# Extract linux-libc-headers-dev package
+# Extract from Neo-PiOS Yocto build (after successful build)
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
 mkdir -p ${SYSROOT}
 tar --zstd -xf data.tar.zst -C ${SYSROOT}
 ```
 
-This extracts headers to `${SYSROOT}/usr/include/`.
+Headers must be at `${SYSROOT}/usr/include/` (contains `linux/`, `asm/`, `asm-generic/`).
 
-### Configure SYSROOT
+## Build Flow (Strict Order)
 
-Set in `build.conf`:
-```bash
-export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
+```
+Stage 1: libiconv → gmp → isl → mpfr → mpc  (host tools, static libs)
+Stage 2: binutils                            (aarch64 assembler/linker)
+Stage 3: gcc stage 1 ("xgcc")                (C compiler only, no headers)
+Stage 4: glibc headers                       (requires kernel headers)
+Stage 5: gcc stage 2                         (full C/C++ compiler)
+Stage 6: glibc                               (full C library)
+Stage 7: gdb                                 (debugger)
 ```
 
-**Why required**: Glibc needs kernel headers (`<linux/*.h>`, `<asm/*.h>`) for:
-- System call numbers and calling conventions
-- Kernel data structures (`struct stat`, `struct timespec`)
-- Constants (errno values, signals)
-- Type definitions (`pid_t`, `ssize_t`)
-
-Without matching headers, glibc compilation fails.
-
----
+**Why multi-stage**: GCC needs glibc, but glibc needs GCC. Stages 3-5 break this circular dependency.
 
 ## Key Files
-- `build.conf` — Configuration: versions, paths, target architecture, SYSROOT
-- `build.bash` — Build script: downloads, extracts, and builds all components
-- `patches/` — Custom patches for MinGW-w64 compatibility:
-  - `gmp-6.3.0-long-long-reliability.patch` — Fixes GMP configure test for long long reliability
-  - `libiconv-1.17-mingw-mbrtowc.patch` — Fixes libiconv mbtowc test on MinGW
 
-## Build Order (Critical)
-Components must be built in this exact sequence due to dependencies:
-1. libiconv → 2. gmp → 3. isl → 4. mpfr → 5. mpc → 6. binutils → 7. xgcc (stage 1) → 8. glibc → 9. gcc (stage 2) → 10. gdb
+| File | Purpose |
+|------|---------|
+| `build.conf` | Versions, target triplet, paths (`SYSROOT`, `HOST_TOOLS`) |
+| `build.bash` | Main build script (800+ lines, `do_*()` functions) |
+| `patches/` | MinGW compatibility patches (gmp, libiconv) |
 
-## Build Notes
-- **GMP Configuration**: MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags to ensure static `libgmp.a` is found
-- **Warning Handling**: `--disable-werror` removed from all components to allow builds to continue despite compiler warnings
-- **GMP Patch Required**: The `gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64
-- **Cortex-A53 Optimization**: GCC and glibc tuned for Raspberry Pi 4 via `TUNE` and `GLIBC_TUNE` variables
-  - GCC: `--enable-fix-cortex-a53-843419` (errata workaround)
-  - glibc: `-march=aarch64 -mcpu=cortex-a53` (compilation flags)
+## Build Commands
 
-## Environment
-- **Host**: MSYS2/MinGW on Windows
-- **Required packages** (build tools only — GMP/MPFR/MPC/ISL built from source):
-  ```bash
-  pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget texinfo make python zstd
-  ```
-- **Required runtime DLL**: `libwinpthread-1.dll` (copied to toolchain lib directory)
-  - Build will fail if this DLL is not found in MSYS2
-  - Install with: `pacman -S mingw-w64-x86_64-gcc`
-- **Output**: Toolchain installed to `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
+```bash
+# Full build (2-4 hours)
+bash build.bash
 
-## Component Versions (build.conf)
-| Component | Version |
-|-----------|---------|
-| GCC | 15.3.0 |
-| Binutils | 2.42 |
-| Glibc | 2.42 |
-| GDB | 15.2 |
-| GMP | 6.3.0 |
-| MPFR | 4.2.2 |
-| MPC | 1.3.1 |
-| ISL | 0.24 |
-| Libiconv | 1.17 |
+# Output location
+${OUTPUT_DIRECTORY}/aarch64-linux-gnu/
+├── bin/    # aarch64-linux-gnu-gcc, -gdb, -as, -ld
+├── lib/    # libgcc, libstdc++, glibc, startup files
+└── usr/    # target headers (kernel + glibc)
+```
 
-## Target Architecture
-- **Active**: `aarch64-linux-gnu` (64-bit ARM)
-- **Tune flags**: 
-  - GCC: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
-  - glibc: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
+## MSYS2 Setup
 
-## Artifacts
-- Build dirs: `build/` (temporary, one subdirectory per component)
-- Host tools: `host-tools/` (static libs for build host)
-- Final toolchain: `/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/`
-- Kernel headers: `${SYSROOT}/usr/include/` (from Neo-PiOS, merged with glibc headers)
+```bash
+pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
+         wget patch texinfo make python zstd
+```
 
-## Modifying the Build
-- **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `build.bash`, add `job component` call at end
-- **Change versions**: Update `*_VERSION` exports in `build.conf`
-- **Change output path**: Modify `OUTPUT_DIRECTORY` in `build.conf`
-- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE/SYSROOT block in `build.conf`
-- **Change sysroot path**: Update `SYSROOT` in `build.conf` to point to toolchain directory
+**Runtime DLL**: `libwinpthread-1.dll` is copied to toolchain lib during build.
 
-## Build Time & Space
-- **Disk space**: ~13 GB required (plus Neo-PiOS build for headers)
-- **Build time**: ~2-4 hours depending on CPU cores
+## Configuration (build.conf)
 
-## Related Projects
-- [Neo-PiOS](https://github.com/Neo-PiOS/Neo-PiOS) - Yocto-based embedded Linux for Raspberry Pi 4 (provides kernel headers)
+```bash
+TARGET=aarch64-linux-gnu
+TUNE="--enable-fix-cortex-a53-843419"           # GCC flag
+GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"    # glibc CFLAGS
+SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
+```
+
+## Common Pitfalls
+
+| Issue | Solution |
+|-------|----------|
+| Glibc fails with missing `<linux/*.h>` | Kernel headers not extracted to `${SYSROOT}/usr/include/` |
+| GCC configure fails on GMP | Missing `--with-gmp-include` and `--with-gmp-lib` flags (don't use `--with-gmp-prefix`) |
+| MinGW configure test failures | Apply patches in `patches/` directory |
+| `--disable-werror` removed | Builds tolerate warnings from cross-compilation |
+
+## Architecture Notes
+
+- **Host**: `x86_64-w64-mingw32` (Windows/MSYS2)
+- **Target**: `aarch64-linux-gnu` (Cortex-A53, Raspberry Pi 4)
+- **All deps built from source**: GMP, MPFR, MPC, ISL (not via pacman)
+- **Static host libs**: `--enable-static --disable-shared` for stage 1
+
+## Verification
+
+```bash
+aarch64-linux-gnu-gcc --version    # GCC 15.3.0
+aarch64-linux-gnu-gdb --version    # GDB 15.2
+echo 'int main(){}' | aarch64-linux-gnu-gcc -x c - -o test && file test
+# Expected: PE32+ executable (console) x86-64
+```
