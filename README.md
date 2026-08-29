@@ -26,8 +26,6 @@ This extracts the kernel headers to `${SYSROOT}`, where the toolchain build can 
 
 **Note**: The `data.tar.zst` archive already contains the `./usr/include` directory structure, so extracting to `${SYSROOT}` will place headers at `${SYSROOT}/usr/include/` automatically.
 
-**Important**: The headers must be extracted to `${SYSROOT}`, as the glibc and GCC builds use `--with-headers=${SYSROOT}/usr/include` to locate them.
-
 ### Configure the Toolchain
 
 Set the `SYSROOT` variable in `build.conf` to point to the toolchain directory:
