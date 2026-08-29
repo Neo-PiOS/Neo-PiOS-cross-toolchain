@@ -298,61 +298,6 @@ Neo-PiOS-cross-toolchain/
     └── usr/          # Target headers and libraries (kernel + glibc)
 ```
 
-### How build.bash Works
-
-1. **Source configuration**: `source build.conf` loads all variables
-2. **Define source archives**: `SRC_GCC=gcc-${GCC_VERSION}.tar.gz`
-3. **Download**: `wget` from GNU mirrors if not present
-4. **Extract**: `tar -xf` if not already extracted
-5. **Verify**: Check all directories exist
-6. **Build functions**: Each `do_*()` function configures and builds one component
-7. **Job wrapper**: `job component` creates build dir, runs function, returns
-
-### The Job Function
-
-```bash
-function job()
-{
-    mkdir -p build/$1           # Create isolated build directory
-    pushd build/$1              # Enter it
-    do_$1                       # Call the build function (e.g., do_gmp)
-    popd                        # Return to root
-}
-```
-
-This ensures:
-- Each component builds in its own directory
-- Build artifacts don't interfere with each other
-- Clean separation between components
-
----
-
-## Build Notes
-
-### GMP Configuration
-
-MPFR, ISL, and MPC use explicit `--with-gmp-include` and `--with-gmp-lib` flags instead of `--with-gmp-prefix` to ensure the static `libgmp.a` is found correctly during configuration.
-
-### Warning Handling
-
-The `--disable-werror` flag has been removed from all components. This allows builds to continue despite compiler warnings, which is common when cross-compiling with different toolchain versions.
-
-### Required Patches
-
-**GMP Patch**: The `patches/gmp-6.3.0-long-long-reliability.patch` fixes a configure test that fails on MinGW-w64. This patch is applied automatically during the build.
-
-**Libiconv Patch**: The `patches/libiconv-1.17-mingw-mbrtowc.patch` fixes the mbtowc test on MinGW.
-
-### Cortex-A53 Optimization
-
-The toolchain is optimized for Raspberry Pi 4's Cortex-A53 processor:
-- **GCC**: `--enable-fix-cortex-a53-843419` (via `TUNE` variable)
-- **glibc**: `-march=aarch64 -mcpu=cortex-a53` (via `GLIBC_TUNE` variable)
-
-These flags enable Cortex-A53-specific optimizations and errata workarounds in both the compiler and C library.
-
-**Note**: The target architecture (`aarch64`) is specified by the `--target` triplet, not a configure flag.
-
 ---
 
 ## Prerequisites
@@ -360,16 +305,12 @@ These flags enable Cortex-A53-specific optimizations and errata workarounds in b
 ### MSYS2 Packages (Build Tools Only)
 
 ```bash
-pacman -Syu
 pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
-         wget texinfo make python zstd
+         wget patch texinfo make python zstd
 ```
 
 **Note**: GMP, MPFR, MPC, ISL are **built from source** by this script, not installed via pacman.
 
-**Required runtime DLL**: The build requires `libwinpthread-1.dll` which is copied to the toolchain lib directory. If missing, the build will fail with an error. Install with:
-```bash
-pacman -S mingw-w64-x86_64-gcc
 ```
 
 ### Disk Space
@@ -394,72 +335,9 @@ pacman -S mingw-w64-x86_64-gcc
 ```bash
 # 1. Install prerequisites (see above)
 
-# 2. Clean any previous builds
-rm -rf build/ host-tools/ *.tar.gz *.tar.xz *.tar.bz2
-
-# 3. Run the build
+# 2. Run the build
 bash build.bash
 ```
-
----
-
-## Verification
-
-```bash
-# Check compiler version
-/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc --version
-# Expected: gcc (GCC) 15.3.0
-
-# Check debugger version
-/e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gdb --version
-# Expected: GNU gdb 15.2
-
-# Test compilation
-echo 'int main(){return 0;}' | \
-  /e/Neo-PiOS-cross-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc -x c - -o test.exe
-
-file test.exe
-# Expected: PE32+ executable (console) x86-64
-```
-
----
-
-## Customization
-
-### Change Target
-
-Edit `build.conf` — modify the TARGET block:
-
-```bash
-# 64-bit ARM (Cortex-A53, Raspberry Pi 4)
-export TARGET=aarch64-linux-gnu
-export TUNE="--enable-fix-cortex-a53-843419"
-export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
-export SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
-```
-
-**Note**: The target architecture is determined by the `--target` triplet. The `TUNE` variable contains only valid GCC configure flags.
-
-### Change Output Path
-
-```bash
-OUTPUT_DIRECTORY='/your/custom/path'
-```
-
-### Update Versions
-
-Edit version exports in `build.conf`.
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Download fails | Check network, try different mirror |
-| Build fails | Check `config.log` in build directory |
-| Permission denied | Run MSYS2 as Administrator |
-| Disk full | Clean: `rm -rf build/ host-tools/ *.tar.*` |
 
 ---
 
