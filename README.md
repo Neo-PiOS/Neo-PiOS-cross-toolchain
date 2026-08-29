@@ -18,11 +18,15 @@ From the Neo-PiOS repository (after a successful Yocto build):
 # Extract the linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
-tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+mkdir -p ${HOST_TOOLS}
+tar --zstd -xf data.tar.zst -C ${HOST_TOOLS}
 ```
 
-This extracts the kernel headers to `${SYSROOT}/usr/include/`, where the toolchain build can find them.
+This extracts the kernel headers to `${HOST_TOOLS}`, where the toolchain build can find them.
+
+**Note**: The `data.tar.zst` archive already contains the `./usr/include` directory structure, so extracting to `${HOST_TOOLS}` will place headers at `${HOST_TOOLS}/usr/include/` automatically.
+
+**Important**: The headers must be extracted to `${HOST_TOOLS}`, as the glibc build uses `--with-headers=${HOST_TOOLS}/usr/include` to locate them.
 
 ### Configure the Toolchain
 
@@ -40,7 +44,7 @@ export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
 
 Without matching headers, glibc compilation will fail.
 
-**Kernel headers location**: Extract from Neo-PiOS Yocto build to `${SYSROOT}/usr/include/` (see [Sysroot Requirement](#sysroot-requirement-critical)).
+**Kernel headers location**: Extract from Neo-PiOS Yocto build to `${HOST_TOOLS}/usr/include/` (see [Sysroot Requirement](#sysroot-requirement-critical)).
 
 ## Why Build from Source?
 
@@ -108,7 +112,7 @@ The build is split into stages that break this circular dependency:
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Stage 4: Glibc headers and startup files                       │
+│  Stage 4: Glibc headers (requires kernel headers from Neo-PiOS) │
 │  ┌────────┐                                                      │
 │  │ glibc  │ → provides <stdio.h>, <stdlib.h>, crt*.o, etc.      │
 │  └────────┘ → installed to sysroot for target                    │
@@ -206,12 +210,12 @@ The build is split into stages that break this circular dependency:
 
 **Why here**: Now we have xgcc (stage 3) which can compile C code, and binutils (stage 2) which can assemble and link ARM64 objects.
 
-**Prerequisite**: Kernel headers extracted from Neo-PiOS Yocto build (see [Sysroot Requirement](#sysroot-requirement-critical)).
+**Prerequisite**: Kernel headers extracted from Neo-PiOS Yocto build to `${HOST_TOOLS}/usr/include/` (see [Sysroot Requirement](#sysroot-requirement-critical)).
 
 **Key configuration**:
 ```bash
 --host=${TARGET}            # Cross-compile for aarch64
---with-headers=${SYSROOT}/usr/include  # Target kernel headers (REQUIRED)
+--with-headers=${HOST_TOOLS}/usr/include  # Target kernel headers (REQUIRED)
 CC="${TARGET}-gcc"          # Use the xgcc we just built
 --disable-sanity-checks     # Skip host compatibility checks
 libc_cv_*                   # Override autoconf checks for cross-build
