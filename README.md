@@ -300,25 +300,13 @@ Neo-PiOS-cross-toolchain/
 
 ---
 
-## Prerequisites
+## Prerequisites & Quick Start
 
-### MSYS2 Packages (Build Tools Only)
-
-```bash
-pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
-         wget patch texinfo make python zstd
-```
-
-**Note**: GMP, MPFR, MPC, ISL are **built from source** by this script, not installed via pacman.
-
-```
-## Quick Start
+**Requires:** MSYS2 + kernel headers at `${SYSROOT}/usr/include` ([extract](#sysroot-requirement-critical)). GMP/MPFR/MPC/ISL/libiconv are built from source (not via pacman). Build time: ~2-4h.
 
 ```bash
-# 1. Install prerequisites (see above)
-
-# 2. Run the build
-bash build.bash
+pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget patch texinfo make python zstd
+bash build.bash                          # builds to aarch64-linux-gnu/bin/
 ```
 
 ---
