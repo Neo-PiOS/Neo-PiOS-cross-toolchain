@@ -260,7 +260,7 @@ libc_cv_*                   # Override autoconf checks for cross-build
 - `libatomic.so` - Atomic operations
 - `libsanitizer.*` - AddressSanitizer, ThreadSanitizer, etc.
 
-**Output**: Complete toolchain in `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
+**Output**: Complete toolchain
 
 ---
 
