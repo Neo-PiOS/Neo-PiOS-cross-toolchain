@@ -1,4 +1,13 @@
 ###############################################################################
+######################   INSTALL DEPENDENCIES     #############################
+###############################################################################
+# MSYS: pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget   #
+#       pacman -S patch texinfo make python zstd                              #
+# Note: GMP/MPFR/MPC/ISL are built from source, not installed via pacman      #
+###############################################################################
+
+
+###############################################################################
 OUTPUT_DIRECTORY='/e/Neo-PiOS-cross-toolchain'
 ###############################################################################
 
@@ -10,49 +19,37 @@ SCRIPT_DIR=$(dirname ${BASH_SOURCE})
 cd ${SCRIPT_DIR}
 
 WORK_DIR=$(pwd)
-export BUILD_DIR="${WORK_DIR}/build"
-export HOST_TOOLS=${WORK_DIR}/host-tools
-
-###############################################################################
-######################   INSTALL DEPENDENCIES     #############################
-###############################################################################
-# MSYS: pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget   #
-#       pacman -S patch texinfo make python zstd                              #
-# Note: GMP/MPFR/MPC/ISL are built from source, not installed via pacman      #
-###############################################################################
-
-export HOST=x86_64-w64-mingw32
-export PATH="/mingw64/bin:${PATH}"
-###############################################################################
-
+BUILD_DIR="${WORK_DIR}/build"
+HOST_TOOLS=${WORK_DIR}/host-tools
 
 
 # CROSS COMPILER VERSIONS
 ###############################################################################
-export LIBICONV_VERSION=1.17
-export GMP_VERSION=6.3.0
-export ISL_VERSION=0.24
-export MPFR_VERSION=4.2.2
-export MPC_VERSION=1.3.1
-export BINUTILS_VERSION=2.42
-export GCC_VERSION=15.3.0
-export GLIBC_VERSION=2.42
-export GDB_VERSION=15.2
+LIBICONV_VERSION=1.17
+GMP_VERSION=6.3.0
+ISL_VERSION=0.24
+MPFR_VERSION=4.2.2
+MPC_VERSION=1.3.1
+BINUTILS_VERSION=2.42
+GCC_VERSION=15.3.0
+GLIBC_VERSION=2.42
+GDB_VERSION=15.2
 ###############################################################################
 
 # CROSS COMPILER TUPLE: aarch64-linux-gnu
 ###############################################################################
-export TARGET=aarch64-linux-gnu
-export TUNE="--enable-fix-cortex-a53-843419"
-export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
-export SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
+HOST=x86_64-w64-mingw32
+TARGET=aarch64-linux-gnu
+TUNE="--enable-fix-cortex-a53-843419"
+GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
+SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
 ###############################################################################
 
 
 
 # CROSS COMPILER SETUP
 ###############################################################################
-export PATH=${SYSROOT}/bin:${PATH}
+export PATH=/mingw64/bin:${SYSROOT}/bin:${PATH}
 ###############################################################################
 
 
@@ -779,7 +776,6 @@ function job()
   popd >/dev/null 2>&1
   return ${result}
 }
-export -f job
 ###############################################################################
 # SKIP IF ALREADY BUILT - Incremental build support
 ###############################################################################
@@ -808,7 +804,6 @@ job_skip_if_done() {
     exit 1  # Stop build immediately - trap will show error message
   fi
 }
-export -f job_skip_if_done
 ###############################################################################
 # BUILD ORDER - Components built in sequence (dependencies respected)
 ###############################################################################
