@@ -30,7 +30,7 @@ This extracts the kernel headers to `${HOST_TOOLS}`, where the toolchain build c
 
 ### Configure the Toolchain
 
-Set the `SYSROOT` variable in `env.conf` to point to the toolchain directory:
+Set the `SYSROOT` variable in `build.conf` to point to the toolchain directory:
 
 ```bash
 export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
@@ -287,8 +287,8 @@ libc_cv_*                   # Override autoconf checks for cross-build
 
 ```
 Neo-PiOS-cross-toolchain/
-├── env.conf          # Configuration: versions, paths, target
-├── env.build         # Build script (this file)
+├── build.conf        # Configuration: versions, paths, target
+├── build.bash        # Build script (this file)
 ├── patches/          # Custom patches for MinGW-w64 compatibility
 │   ├── gmp-6.3.0-long-long-reliability.patch  # Fixes GMP configure test
 │   └── libiconv-1.17-mingw-mbrtowc.patch      # Fixes libiconv mbtowc test
@@ -300,9 +300,9 @@ Neo-PiOS-cross-toolchain/
     └── usr/          # Target headers and libraries (kernel + glibc)
 ```
 
-### How env.build Works
+### How build.bash Works
 
-1. **Source configuration**: `source env.conf` loads all variables
+1. **Source configuration**: `source build.conf` loads all variables
 2. **Define source archives**: `SRC_GCC=gcc-${GCC_VERSION}.tar.gz`
 3. **Download**: `wget` from GNU mirrors if not present
 4. **Extract**: `tar -xf` if not already extracted
@@ -400,7 +400,7 @@ pacman -S mingw-w64-x86_64-gcc
 rm -rf build/ host-tools/ *.tar.gz *.tar.xz *.tar.bz2
 
 # 3. Run the build
-bash env.build
+bash build.bash
 ```
 
 ---
@@ -430,7 +430,7 @@ file test.exe
 
 ### Change Target
 
-Edit `env.conf` — modify the TARGET block:
+Edit `build.conf` — modify the TARGET block:
 
 ```bash
 # 64-bit ARM (Cortex-A53, Raspberry Pi 4)
@@ -450,7 +450,7 @@ OUTPUT_DIRECTORY='/your/custom/path'
 
 ### Update Versions
 
-Edit version exports in `env.conf`.
+Edit version exports in `build.conf`.
 
 ---
 

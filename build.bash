@@ -8,7 +8,7 @@
 
 
 ###############################################################################
-source env.conf
+source build.conf
 ###############################################################################
 
 
@@ -67,10 +67,10 @@ cleanup_on_exit() {
     echo -e "Check logs in: \033[0;36m${BUILD_DIR}/${LAST_JOB}/\033[0m"
     echo ""
     echo "To retry after fixing the error:"
-    echo -e "  \033[0;32mbash env.build\033[0m  (will resume from failed job)"
+    echo -e "  \033[0;32mbash build.bash\033[0m  (will resume from failed job)"
     echo ""
     echo "To clean and rebuild from scratch:"
-    echo -e "  \033[0;32mbash env.build clean\033[0m"
+    echo -e "  \033[0;32mbash build.bash clean\033[0m"
     echo "========================================"
   fi
 }
@@ -190,7 +190,7 @@ function clean_build() {
   # Remove all patch markers after cleaning folders
   rm -f ${BUILD_DIR}/.patched-*
   
-  echo -e "\033[0;32mClean complete.\033[0m Run 'bash env.build' to rebuild."
+  echo -e "\033[0;32mClean complete.\033[0m Run 'bash build.bash' to rebuild."
 }
 
 # Handle clean command
