@@ -15,15 +15,15 @@ From the Neo-PiOS repository (after Yocto build):
 # Extract linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
-tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+mkdir -p ${SYSROOT}
+tar --zstd -xf data.tar.zst -C ${SYSROOT}
 ```
 
 This extracts headers to `${SYSROOT}/usr/include/`.
 
 ### Configure SYSROOT
 
-Set in `env.conf`:
+Set in `build.conf`:
 ```bash
 export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
 ```
@@ -39,8 +39,8 @@ Without matching headers, glibc compilation fails.
 ---
 
 ## Key Files
-- `env.conf` — Configuration: versions, paths, target architecture, SYSROOT
-- `env.build` — Build script: downloads, extracts, and builds all components
+- `build.conf` — Configuration: versions, paths, target architecture, SYSROOT
+- `build.bash` — Build script: downloads, extracts, and builds all components
 - `patches/` — Custom patches for MinGW-w64 compatibility:
   - `gmp-6.3.0-long-long-reliability.patch` — Fixes GMP configure test for long long reliability
   - `libiconv-1.17-mingw-mbrtowc.patch` — Fixes libiconv mbtowc test on MinGW
@@ -68,7 +68,7 @@ Components must be built in this exact sequence due to dependencies:
   - Install with: `pacman -S mingw-w64-x86_64-gcc`
 - **Output**: Toolchain installed to `/e/Neo-PiOS-cross-toolchain/gcc-aarch64-linux-gnu/`
 
-## Component Versions (env.conf)
+## Component Versions (build.conf)
 | Component | Version |
 |-----------|---------|
 | GCC | 15.3.0 |
@@ -94,11 +94,11 @@ Components must be built in this exact sequence due to dependencies:
 - Kernel headers: `${SYSROOT}/usr/include/` (from Neo-PiOS, merged with glibc headers)
 
 ## Modifying the Build
-- **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `env.build`, add `job component` call at end
-- **Change versions**: Update `*_VERSION` exports in `env.conf`
-- **Change output path**: Modify `OUTPUT_DIRECTORY` in `env.conf`
-- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE/SYSROOT block in `env.conf`
-- **Change sysroot path**: Update `SYSROOT` in `env.conf` to point to toolchain directory
+- **Add a component**: Define `SRC_*`, `DST_*`, `do_*()` function in `build.bash`, add `job component` call at end
+- **Change versions**: Update `*_VERSION` exports in `build.conf`
+- **Change output path**: Modify `OUTPUT_DIRECTORY` in `build.conf`
+- **Switch target**: Edit TARGET/TUNE/GLIBC_TUNE/SYSROOT block in `build.conf`
+- **Change sysroot path**: Update `SYSROOT` in `build.conf` to point to toolchain directory
 
 ## Build Time & Space
 - **Disk space**: ~13 GB required (plus Neo-PiOS build for headers)

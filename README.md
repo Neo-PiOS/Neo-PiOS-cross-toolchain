@@ -18,15 +18,17 @@ From the Neo-PiOS repository (after a successful Yocto build):
 # Extract the linux-libc-headers-dev package
 cp $(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk
 ar x linux-libc-headers.ipk
-mkdir -p ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
-tar --zstd -xf data.tar.zst -C ${OUTPUT_DIRECTORY}/aarch64-linux-gnu/usr
+mkdir -p ${SYSROOT}
+tar --zstd -xf data.tar.zst -C ${SYSROOT}
 ```
 
-This extracts the kernel headers to `${SYSROOT}/usr/include/`, where the toolchain build can find them.
+This extracts the kernel headers to `${SYSROOT}`, where the toolchain build can find them.
+
+**Note**: The `data.tar.zst` archive already contains the `./usr/include` directory structure, so extracting to `${SYSROOT}` will place headers at `${SYSROOT}/usr/include/` automatically.
 
 ### Configure the Toolchain
 
-Set the `SYSROOT` variable in `env.conf` to point to the toolchain directory:
+Set the `SYSROOT` variable in `build.conf` to point to the toolchain directory:
 
 ```bash
 export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
@@ -108,7 +110,7 @@ The build is split into stages that break this circular dependency:
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Stage 4: Glibc headers and startup files                       │
+│  Stage 4: Glibc headers (requires kernel headers from Neo-PiOS) │
 │  ┌────────┐                                                      │
 │  │ glibc  │ → provides <stdio.h>, <stdlib.h>, crt*.o, etc.      │
 │  └────────┘ → installed to sysroot for target                    │
@@ -206,7 +208,7 @@ The build is split into stages that break this circular dependency:
 
 **Why here**: Now we have xgcc (stage 3) which can compile C code, and binutils (stage 2) which can assemble and link ARM64 objects.
 
-**Prerequisite**: Kernel headers extracted from Neo-PiOS Yocto build (see [Sysroot Requirement](#sysroot-requirement-critical)).
+**Prerequisite**: Kernel headers extracted from Neo-PiOS Yocto build to `${SYSROOT}/usr/include/` (see [Sysroot Requirement](#sysroot-requirement-critical)).
 
 **Key configuration**:
 ```bash
@@ -283,8 +285,8 @@ libc_cv_*                   # Override autoconf checks for cross-build
 
 ```
 Neo-PiOS-cross-toolchain/
-├── env.conf          # Configuration: versions, paths, target
-├── env.build         # Build script (this file)
+├── build.conf        # Configuration: versions, paths, target
+├── build.bash        # Build script (this file)
 ├── patches/          # Custom patches for MinGW-w64 compatibility
 │   ├── gmp-6.3.0-long-long-reliability.patch  # Fixes GMP configure test
 │   └── libiconv-1.17-mingw-mbrtowc.patch      # Fixes libiconv mbtowc test
@@ -296,9 +298,9 @@ Neo-PiOS-cross-toolchain/
     └── usr/          # Target headers and libraries (kernel + glibc)
 ```
 
-### How env.build Works
+### How build.bash Works
 
-1. **Source configuration**: `source env.conf` loads all variables
+1. **Source configuration**: `source build.conf` loads all variables
 2. **Define source archives**: `SRC_GCC=gcc-${GCC_VERSION}.tar.gz`
 3. **Download**: `wget` from GNU mirrors if not present
 4. **Extract**: `tar -xf` if not already extracted
@@ -396,7 +398,7 @@ pacman -S mingw-w64-x86_64-gcc
 rm -rf build/ host-tools/ *.tar.gz *.tar.xz *.tar.bz2
 
 # 3. Run the build
-bash env.build
+bash build.bash
 ```
 
 ---
@@ -426,7 +428,7 @@ file test.exe
 
 ### Change Target
 
-Edit `env.conf` — modify the TARGET block:
+Edit `build.conf` — modify the TARGET block:
 
 ```bash
 # 64-bit ARM (Cortex-A53, Raspberry Pi 4)
@@ -446,7 +448,7 @@ OUTPUT_DIRECTORY='/your/custom/path'
 
 ### Update Versions
 
-Edit version exports in `env.conf`.
+Edit version exports in `build.conf`.
 
 ---
 

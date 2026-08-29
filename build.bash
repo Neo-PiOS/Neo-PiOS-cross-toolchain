@@ -8,7 +8,7 @@
 
 
 ###############################################################################
-source env.conf
+source build.conf
 ###############################################################################
 
 
@@ -67,10 +67,10 @@ cleanup_on_exit() {
     echo -e "Check logs in: \033[0;36m${BUILD_DIR}/${LAST_JOB}/\033[0m"
     echo ""
     echo "To retry after fixing the error:"
-    echo -e "  \033[0;32mbash env.build\033[0m  (will resume from failed job)"
+    echo -e "  \033[0;32mbash build.bash\033[0m  (will resume from failed job)"
     echo ""
     echo "To clean and rebuild from scratch:"
-    echo -e "  \033[0;32mbash env.build clean\033[0m"
+    echo -e "  \033[0;32mbash build.bash clean\033[0m"
     echo "========================================"
   fi
 }
@@ -190,7 +190,7 @@ function clean_build() {
   # Remove all patch markers after cleaning folders
   rm -f ${BUILD_DIR}/.patched-*
   
-  echo -e "\033[0;32mClean complete.\033[0m Run 'bash env.build' to rebuild."
+  echo -e "\033[0;32mClean complete.\033[0m Run 'bash build.bash' to rebuild."
 }
 
 # Handle clean command
@@ -537,6 +537,36 @@ function do_xgcc()
 # Installs headers only so GCC stage 2 can compile with proper target headers
 function do_glibc_headers()
 {
+  # Check if kernel headers exist before proceeding
+  if [ ! -d "${SYSROOT}/usr/include" ]; then
+    echo ""
+    echo -e "\033[0;31m[ERROR]\033[0m Kernel headers not found at ${SYSROOT}/usr/include"
+    echo ""
+    echo "========================================"
+    echo -e "\033[0;31mKERNEL HEADERS REQUIRED\033[0m"
+    echo ""
+    echo "Glibc requires kernel headers from Neo-PiOS Yocto build."
+    echo ""
+    echo -e "See \033[0;36mREADME.md\033[0m section: \033[0;33m'Extracting Kernel Headers from Neo-PiOS'\033[0m"
+    echo ""
+    echo "Quick reference:"
+    echo "  cp \$(ls build/tmp/deploy/ipk/*/linux-libc-headers-dev*.ipk) linux-libc-headers.ipk"
+    echo "  ar x linux-libc-headers.ipk"
+    echo "  mkdir -p \${SYSROOT}"
+    echo "  tar --zstd -xf data.tar.zst -C \${SYSROOT}"
+    echo ""
+    echo "This extracts headers to: ${SYSROOT}/usr/include/"
+    echo "========================================"
+    echo ""
+    read -p "Have you extracted the kernel headers? Continue anyway? [y/N]: " confirm
+    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+      echo -e "\033[0;31mBuild cancelled by user. Please extract kernel headers and re-run.\033[0m"
+      exit 1
+    fi
+    echo -e "\033[0;33m[WARNING]\033[0m Continuing without kernel headers - glibc build will likely fail!"
+    echo ""
+  fi
+  
   export CC="${TARGET}-gcc"
   export CXX="${TARGET}-g++"
   export CPP="${TARGET}-gcc -E"
@@ -593,7 +623,7 @@ function do_gcc()
   --host=${HOST} \
   --build=${HOST} \
   --target=${TARGET} ${TUNE} \
-  --with-headers=${SYSROOT}/usr/include \
+  --with-sysroot=${SYSROOT} \
   --with-libiconv-prefix=${HOST_TOOLS} \
   --with-isl=${HOST_TOOLS} \
   --with-gmp=${HOST_TOOLS} \
