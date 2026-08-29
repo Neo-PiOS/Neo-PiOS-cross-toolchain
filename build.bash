@@ -1,14 +1,58 @@
 ###############################################################################
-#! /bin/bash
+OUTPUT_DIRECTORY='/e/Neo-PiOS-cross-toolchain'
 ###############################################################################
 
 
-#set -x
-#trap read debug
-
 
 ###############################################################################
-source build.conf
+
+SCRIPT_DIR=$(dirname ${BASH_SOURCE})
+cd ${SCRIPT_DIR}
+
+WORK_DIR=$(pwd)
+export BUILD_DIR="${WORK_DIR}/build"
+export HOST_TOOLS=${WORK_DIR}/host-tools
+
+###############################################################################
+######################   INSTALL DEPENDENCIES     #############################
+###############################################################################
+# MSYS: pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison wget   #
+#       pacman -S patch texinfo make python zstd                              #
+# Note: GMP/MPFR/MPC/ISL are built from source, not installed via pacman      #
+###############################################################################
+
+export HOST=x86_64-w64-mingw32
+export PATH="/mingw64/bin:${PATH}"
+###############################################################################
+
+
+
+# CROSS COMPILER VERSIONS
+###############################################################################
+export LIBICONV_VERSION=1.17
+export GMP_VERSION=6.3.0
+export ISL_VERSION=0.24
+export MPFR_VERSION=4.2.2
+export MPC_VERSION=1.3.1
+export BINUTILS_VERSION=2.42
+export GCC_VERSION=15.3.0
+export GLIBC_VERSION=2.42
+export GDB_VERSION=15.2
+###############################################################################
+
+# CROSS COMPILER TUPLE: aarch64-linux-gnu
+###############################################################################
+export TARGET=aarch64-linux-gnu
+export TUNE="--enable-fix-cortex-a53-843419"
+export GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
+export SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
+###############################################################################
+
+
+
+# CROSS COMPILER SETUP
+###############################################################################
+export PATH=${SYSROOT}/bin:${PATH}
 ###############################################################################
 
 

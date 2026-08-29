@@ -32,8 +32,7 @@ Stage 7: gdb                                 (debugger)
 
 | File | Purpose |
 |------|---------|
-| `build.conf` | Versions, target triplet, paths (`SYSROOT`, `HOST_TOOLS`) |
-| `build.bash` | Main build script (800+ lines, `do_*()` functions) |
+| `build.bash` | Main build script + config (versions, target triplet, paths `SYSROOT`/`HOST_TOOLS`, 800+ lines, `do_*()` functions) |
 | `patches/` | MinGW compatibility patches (gmp, libiconv) |
 
 ## Build Commands
@@ -58,7 +57,9 @@ pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
 
 **Runtime DLL**: `libwinpthread-1.dll` is copied to toolchain lib during build.
 
-## Configuration (build.conf)
+## Configuration (build.bash)
+
+Configuration is at the top of `build.bash`:
 
 ```bash
 TARGET=aarch64-linux-gnu

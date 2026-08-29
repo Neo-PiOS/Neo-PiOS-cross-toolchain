@@ -28,7 +28,7 @@ This extracts the kernel headers to `${SYSROOT}`, where the toolchain build can 
 
 ### Configure the Toolchain
 
-Set the `SYSROOT` variable in `build.conf` to point to the toolchain directory:
+Set the `SYSROOT` variable in `build.bash` (top of file) to point to the toolchain directory:
 
 ```bash
 export SYSROOT='${OUTPUT_DIRECTORY}/aarch64-linux-gnu'
@@ -285,8 +285,7 @@ libc_cv_*                   # Override autoconf checks for cross-build
 
 ```
 Neo-PiOS-cross-toolchain/
-├── build.conf        # Configuration: versions, paths, target
-├── build.bash        # Build script (this file)
+├── build.bash        # Build script + config (versions, paths, target)
 ├── patches/          # Custom patches for MinGW-w64 compatibility
 │   ├── gmp-6.3.0-long-long-reliability.patch  # Fixes GMP configure test
 │   └── libiconv-1.17-mingw-mbrtowc.patch      # Fixes libiconv mbtowc test
