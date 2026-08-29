@@ -312,24 +312,6 @@ pacman -S mingw-w64-x86_64-gcc automake autoconf m4 flex bison \
 **Note**: GMP, MPFR, MPC, ISL are **built from source** by this script, not installed via pacman.
 
 ```
-
-### Disk Space
-
-~13 GB total:
-- Source tarballs: ~200 MB
-- Build directories: ~8 GB (temporary)
-- Final toolchain: ~4 GB
-- Host tools: ~500 MB
-
-### Build Time
-
-2-4 hours depending on:
-- CPU cores (parallel builds help)
-- Disk speed (SSD recommended)
-- Network (for downloads)
-
----
-
 ## Quick Start
 
 ```bash
