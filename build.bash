@@ -7,11 +7,6 @@
 ###############################################################################
 
 
-###############################################################################
-OUTPUT_DIRECTORY='/e/Neo-PiOS-cross-toolchain'
-###############################################################################
-
-
 
 ###############################################################################
 
@@ -42,7 +37,7 @@ HOST=x86_64-w64-mingw32
 TARGET=aarch64-linux-gnu
 TUNE="--enable-fix-cortex-a53-843419"
 GLIBC_TUNE="-march=aarch64 -mcpu=cortex-a53"
-SYSROOT="${OUTPUT_DIRECTORY}/${TARGET}"
+SYSROOT="${WORK_DIR}/${TARGET}"
 ###############################################################################
 
 
@@ -665,7 +660,6 @@ function do_gcc()
   --build=${HOST} \
   --target=${TARGET} ${TUNE} \
   --with-sysroot=${SYSROOT} \
-  --with-build-sysroot=$(cygpath -m "${SYSROOT}" 2>/dev/null) \
   --with-libiconv-prefix=${HOST_TOOLS} \
   --with-isl=${HOST_TOOLS} \
   --with-gmp=${HOST_TOOLS} \
