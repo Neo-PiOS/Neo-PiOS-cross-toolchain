@@ -659,7 +659,7 @@ function do_gcc()
   --host=${HOST} \
   --build=${HOST} \
   --target=${TARGET} ${TUNE} \
-  --with-sysroot=$(cygpath -m "${SYSROOT}" 2>/dev/null || echo "${SYSROOT}") \
+  --with-sysroot=$(cygpath -m "${SYSROOT}") \
   --with-libiconv-prefix=${HOST_TOOLS} \
   --with-isl=${HOST_TOOLS} \
   --with-gmp=${HOST_TOOLS} \
