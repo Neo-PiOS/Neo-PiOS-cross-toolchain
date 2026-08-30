@@ -534,7 +534,6 @@ function do_xgcc()
   --host=${HOST} \
   --build=${HOST} \
   --target=${TARGET} \
-  --with-sysroot=${SYSROOT} \
   --with-libiconv-prefix=${HOST_TOOLS} \
   --with-isl=${HOST_TOOLS} \
   --with-gmp=${HOST_TOOLS} \
