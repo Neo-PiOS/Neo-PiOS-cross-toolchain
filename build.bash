@@ -646,13 +646,17 @@ function do_glibc_headers()
 ###############################################################################
 function do_gcc()
 {
+  mkdir -p ${SYSROOT}/${TARGET}/include
+  cp -r ${SYSROOT}/usr/include/* ${SYSROOT}/${TARGET}/include/
+
   # Merge kernel headers into toolchain sysroot (creates complete target root)
   export CC="${HOST}-gcc"
   export CXX="${HOST}-g++"
   export CPP="${HOST}-gcc -E"
   export AR="${HOST}-gcc-ar"
   export CFLAGS='-O2 -pipe -D__USE_MINGW_ACCESS'
-  
+
+
   ../../gcc-${GCC_VERSION}/configure \
   --prefix=${SYSROOT} \
   --host=${HOST} \
@@ -679,7 +683,10 @@ function do_gcc()
   
   LDFLAGS='-L${HOST_TOOLS}/lib -Wl,-Bstatic -liconv -lgmp -lmpfr -lmpc -lisl -Wl,-Bdynamic -lpthread' make || return 1
   make install-strip || return 1
-  
+ 
+
+  rm -rf ${SYSROOT}/${TARGET}/include
+
   return 0
 }
 ###############################################################################
